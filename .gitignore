@@ -1,0 +1,19 @@
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Virtual environment — never commit this
+venv/
+env/
+
+# Environment variables — contains secrets, never commit this
+.env
+
+# IDE settings
+.vscode/
+.idea/
+
+# Docker volumes
+postgres_data/
