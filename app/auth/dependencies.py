@@ -1,5 +1,5 @@
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from jose import JWTError
 from app.database import get_db
@@ -7,12 +7,12 @@ from app.auth.utils import decode_access_token
 from app.models.user import User
 from app.schemas.user import TokenData
 
-# This tells FastAPI where to expect the token
-# When Swagger UI sees this, it adds an Authorize button automatically
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+# HTTPBearer extracts the token from Authorization: Bearer <token>
+# auto_error=False means we handle the error ourselves
+security = HTTPBearer(auto_error=False)
 
 def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
 ) -> User:
     """
@@ -26,11 +26,15 @@ def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
 
+    # Check if credentials were provided at all
+    if not credentials:
+        raise credentials_exception
+
     try:
-        # Decode the token and extract the payload
+        # Extract the token from "Bearer <token>"
+        token = credentials.credentials
         payload = decode_access_token(token)
 
-        # Get user_id from the payload
         user_id: int = payload.get("user_id")
         if user_id is None:
             raise credentials_exception
@@ -38,7 +42,6 @@ def get_current_user(
         token_data = TokenData(user_id=user_id)
 
     except JWTError:
-        # Token is invalid or expired
         raise credentials_exception
 
     # Find the user in the database
@@ -46,7 +49,6 @@ def get_current_user(
     if user is None:
         raise credentials_exception
 
-    # Check if user is active
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

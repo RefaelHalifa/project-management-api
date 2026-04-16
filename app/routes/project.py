@@ -3,22 +3,29 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse
 from app.services import project as project_service
+from app.auth.dependencies import get_current_user
+from app.models.user import User
 from typing import List
 
-# APIRouter groups all project endpoints together
-# prefix means all routes here start with /projects
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
 @router.get("/", response_model=List[ProjectResponse])
-def get_projects(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    # Depends(get_db) automatically injects a DB session
+def get_projects(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)  # ← protected
+):
     return project_service.get_projects(db, skip=skip, limit=limit)
 
 @router.get("/{project_id}", response_model=ProjectResponse)
-def get_project(project_id: int, db: Session = Depends(get_db)):
+def get_project(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)  # ← protected
+):
     project = project_service.get_project(db, project_id)
     if not project:
-        # Return a proper 404 error if project doesn't exist
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Project with id {project_id} not found"
@@ -26,12 +33,21 @@ def get_project(project_id: int, db: Session = Depends(get_db)):
     return project
 
 @router.post("/", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
-def create_project(project: ProjectCreate, db: Session = Depends(get_db)):
-    # owner_id hardcoded to 1 for now — Day 4 we'll use real JWT auth
-    return project_service.create_project(db, project, owner_id=1)
+def create_project(
+    project: ProjectCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)  # ← protected
+):
+    # Now we use the REAL logged in user's id instead of hardcoded 1
+    return project_service.create_project(db, project, owner_id=current_user.id)
 
 @router.put("/{project_id}", response_model=ProjectResponse)
-def update_project(project_id: int, project: ProjectUpdate, db: Session = Depends(get_db)):
+def update_project(
+    project_id: int,
+    project: ProjectUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)  # ← protected
+):
     updated = project_service.update_project(db, project_id, project)
     if not updated:
         raise HTTPException(
@@ -41,7 +57,11 @@ def update_project(project_id: int, project: ProjectUpdate, db: Session = Depend
     return updated
 
 @router.delete("/{project_id}", response_model=ProjectResponse)
-def delete_project(project_id: int, db: Session = Depends(get_db)):
+def delete_project(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)  # ← protected
+):
     deleted = project_service.delete_project(db, project_id)
     if not deleted:
         raise HTTPException(
