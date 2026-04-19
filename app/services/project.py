@@ -1,44 +1,82 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import asc, desc
 from app.models.project import Project
 from app.schemas.project import ProjectCreate, ProjectUpdate
+from typing import Optional
 
-def get_projects(db: Session, skip: int = 0, limit: int = 100):
-    # Get all projects from the database
-    return db.query(Project).offset(skip).limit(limit).all()
+# Allowed sort fields — prevents SQL injection via sort param
+ALLOWED_SORT_FIELDS = {
+    "created_at": Project.created_at,
+    "updated_at": Project.updated_at,
+    "name": Project.name,
+}
+
+def get_projects(
+    db: Session,
+    skip: int = 0,
+    limit: int = 10,
+    page: int = 1,
+    sort: str = "created_at",
+    order: str = "desc",
+    name: Optional[str] = None,
+):
+    query = db.query(Project)
+
+    # FILTER — by name (partial match)
+    if name:
+        query = query.filter(Project.name.ilike(f"%{name}%"))
+
+    # SORT — only allow safe fields
+    sort_column = ALLOWED_SORT_FIELDS.get(sort, Project.created_at)
+    if order == "asc":
+        query = query.order_by(asc(sort_column))
+    else:
+        query = query.order_by(desc(sort_column))
+
+    # COUNT total before pagination
+    total = query.count()
+
+    # PAGINATE — calculate offset from page number
+    offset = (page - 1) * limit
+    items = query.offset(offset).limit(limit).all()
+
+    # Calculate total pages
+    pages = (total + limit - 1) // limit
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "pages": pages
+    }
 
 def get_project(db: Session, project_id: int):
-    # Get a single project by ID
     return db.query(Project).filter(Project.id == project_id).first()
 
 def create_project(db: Session, project: ProjectCreate, owner_id: int):
-    # Create a new project in the database
     db_project = Project(
         name=project.name,
         description=project.description,
         owner_id=owner_id
     )
-    db.add(db_project)       # Stage the new record
-    db.commit()              # Save to database
-    db.refresh(db_project)  # Refresh to get generated fields (id, created_at)
+    db.add(db_project)
+    db.commit()
+    db.refresh(db_project)
     return db_project
 
 def update_project(db: Session, project_id: int, project: ProjectUpdate):
-    # Get the existing project
     db_project = get_project(db, project_id)
     if not db_project:
         return None
-
-    # Only update fields that were actually sent
     update_data = project.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(db_project, field, value)
-
     db.commit()
     db.refresh(db_project)
     return db_project
 
 def delete_project(db: Session, project_id: int):
-    # Get and delete the project
     db_project = get_project(db, project_id)
     if not db_project:
         return None

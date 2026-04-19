@@ -2,27 +2,38 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse
+from app.schemas.common import PaginatedResponse
 from app.services import project as project_service
 from app.auth.dependencies import get_current_user
 from app.models.user import User
-from typing import List
+from typing import Optional
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
-@router.get("/", response_model=List[ProjectResponse])
+@router.get("/", response_model=PaginatedResponse[ProjectResponse])
 def get_projects(
-    skip: int = 0,
-    limit: int = 100,
+    page: int = 1,
+    limit: int = 10,
+    sort: str = "created_at",
+    order: str = "desc",
+    name: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)  # ← protected
+    current_user: User = Depends(get_current_user)
 ):
-    return project_service.get_projects(db, skip=skip, limit=limit)
+    return project_service.get_projects(
+        db,
+        page=page,
+        limit=limit,
+        sort=sort,
+        order=order,
+        name=name
+    )
 
 @router.get("/{project_id}", response_model=ProjectResponse)
 def get_project(
     project_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)  # ← protected
+    current_user: User = Depends(get_current_user)
 ):
     project = project_service.get_project(db, project_id)
     if not project:
@@ -36,9 +47,8 @@ def get_project(
 def create_project(
     project: ProjectCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)  # ← protected
+    current_user: User = Depends(get_current_user)
 ):
-    # Now we use the REAL logged in user's id instead of hardcoded 1
     return project_service.create_project(db, project, owner_id=current_user.id)
 
 @router.put("/{project_id}", response_model=ProjectResponse)
@@ -46,7 +56,7 @@ def update_project(
     project_id: int,
     project: ProjectUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)  # ← protected
+    current_user: User = Depends(get_current_user)
 ):
     updated = project_service.update_project(db, project_id, project)
     if not updated:
@@ -60,7 +70,7 @@ def update_project(
 def delete_project(
     project_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)  # ← protected
+    current_user: User = Depends(get_current_user)
 ):
     deleted = project_service.delete_project(db, project_id)
     if not deleted:
