@@ -17,3 +17,7 @@ env/
 
 # Docker volumes
 postgres_data/
+
+# Uploaded files
+uploads/*
+!uploads/.gitkeep

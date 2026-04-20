@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -31,6 +31,9 @@ class Task(Base):
 
     # Due date — optional
     due_date = Column(DateTime(timezone=True), nullable=True)
+
+    # stores path to uploaded file
+    file_path = Column(String, nullable=True)
 
     # Which project does this task belong to?
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
