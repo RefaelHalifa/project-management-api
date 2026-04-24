@@ -9,7 +9,11 @@ import os
 
 router = APIRouter(prefix="/tasks", tags=["Files"])
 
-@router.post("/{task_id}/upload")
+@router.post(
+    "/{task_id}/upload",
+    summary="Upload a file to a task",
+    description="Upload a file attachment to a specific task. Allowed types: JPEG, PNG, GIF, PDF, TXT, DOC, DOCX. Maximum file size: 5MB."
+)
 def upload_file(
     task_id: int,
     file: UploadFile = File(...),
@@ -43,7 +47,11 @@ def upload_file(
 
     return file_service.save_file(task_id, file, db)
 
-@router.get("/{task_id}/file")
+@router.get(
+    "/{task_id}/file",
+    summary="Get a presigned download link",
+    description="Generate a temporary signed download URL for a task's file attachment. The link expires after 1 hour. No authentication needed to use the download link itself."
+)
 def get_file_link(
     task_id: int,
     db: Session = Depends(get_db),
@@ -52,7 +60,11 @@ def get_file_link(
     """Get a presigned download link for a task's file"""
     return file_service.generate_presigned_link(task_id, db)
 
-@router.get("/{task_id}/download")
+@router.get(
+    "/{task_id}/download",
+    summary="Download a file using presigned link",
+    description="Download a task's file using a presigned URL. The URL must be valid and not expired. No authentication token required — the signature proves the link is legitimate."
+)
 def download_file(
     task_id: int,
     expires: int,

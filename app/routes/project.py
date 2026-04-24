@@ -10,7 +10,12 @@ from typing import Optional
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
-@router.get("/", response_model=PaginatedResponse[ProjectResponse])
+@router.get(
+    "/",
+    response_model=PaginatedResponse[ProjectResponse],
+    summary="List all projects",
+    description="Get a paginated list of all projects. Supports filtering by name, sorting by any field, and pagination."
+)
 def get_projects(
     page: int = 1,
     limit: int = 10,
@@ -21,15 +26,15 @@ def get_projects(
     current_user: User = Depends(get_current_user)
 ):
     return project_service.get_projects(
-        db,
-        page=page,
-        limit=limit,
-        sort=sort,
-        order=order,
-        name=name
+        db, page=page, limit=limit, sort=sort, order=order, name=name
     )
 
-@router.get("/{project_id}", response_model=ProjectResponse)
+@router.get(
+    "/{project_id}",
+    response_model=ProjectResponse,
+    summary="Get a single project",
+    description="Get full details of a single project by its ID. Returns 404 if not found."
+)
 def get_project(
     project_id: int,
     db: Session = Depends(get_db),
@@ -43,7 +48,13 @@ def get_project(
         )
     return project
 
-@router.post("/", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=ProjectResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new project",
+    description="Create a new project. The authenticated user becomes the owner automatically."
+)
 def create_project(
     project: ProjectCreate,
     db: Session = Depends(get_db),
@@ -51,7 +62,12 @@ def create_project(
 ):
     return project_service.create_project(db, project, owner_id=current_user.id)
 
-@router.put("/{project_id}", response_model=ProjectResponse)
+@router.put(
+    "/{project_id}",
+    response_model=ProjectResponse,
+    summary="Update a project",
+    description="Update a project's name or description. Only send the fields you want to change — other fields remain unchanged."
+)
 def update_project(
     project_id: int,
     project: ProjectUpdate,
@@ -66,7 +82,12 @@ def update_project(
         )
     return updated
 
-@router.delete("/{project_id}", response_model=ProjectResponse)
+@router.delete(
+    "/{project_id}",
+    response_model=ProjectResponse,
+    summary="Delete a project",
+    description="Permanently delete a project and all its associated tasks. This action cannot be undone."
+)
 def delete_project(
     project_id: int,
     db: Session = Depends(get_db),
