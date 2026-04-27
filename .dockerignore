@@ -1,0 +1,10 @@
+# Don't copy these into the Docker image — keeps it clean and small
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.env
+.git/
+.gitignore
+uploads/
+*.md

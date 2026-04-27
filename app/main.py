@@ -15,6 +15,7 @@ from app.routes import project as project_router
 from app.routes import task as task_router
 from app.routes import auth as auth_router
 from app.routes import file as file_router
+from app.routes import health as health_router
 
 security = HTTPBearer()
 
@@ -54,6 +55,7 @@ app.include_router(auth_router.router)
 app.include_router(project_router.router)
 app.include_router(task_router.router)
 app.include_router(file_router.router)
+app.include_router(health_router.router)
 
 @app.get("/", tags=["Health"])
 def root():

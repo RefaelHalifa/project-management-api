@@ -1,17 +1,41 @@
-version: "3.8"
-
 services:
+
+  # ─── PostgreSQL Database ───────────────────────────────────────────
   db:
     image: postgres:15
-    container_name: pm_postgres
+    restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: projectdb
+      POSTGRES_DB: project_management
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    # Tell Docker how to check if Postgres is truly ready
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s       # check every 5 seconds
+      timeout: 5s        # fail if no response in 5 seconds
+      retries: 5         # try 5 times before giving up
 
+  # ─── FastAPI Application ───────────────────────────────────────────
+  app:
+    build: .
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/project_management
+      SECRET_KEY: supersecretkey2026
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 30
+    depends_on:
+      db:
+        condition: service_healthy   # wait until DB passes healthcheck
+    volumes:
+      - ./uploads:/app/uploads
+
+# ─── Named Volumes ─────────────────────────────────────────────────
 volumes:
   postgres_data:

@@ -16,6 +16,13 @@ from app.models.task import Task
 # access to the values within the .ini file in use.
 config = context.config
 
+import os
+# Override sqlalchemy.url with the environment variable if it exists
+# This makes Alembic work both locally (.env) and inside Docker (compose env vars)
+database_url = os.environ.get("DATABASE_URL")
+if database_url:
+    config.set_main_option("sqlalchemy.url", database_url)
+
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 if config.config_file_name is not None:
