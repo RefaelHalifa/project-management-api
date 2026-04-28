@@ -12,14 +12,23 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    # Tell Docker how to check if Postgres is truly ready
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s       # check every 5 seconds
-      timeout: 5s        # fail if no response in 5 seconds
-      retries: 5         # try 5 times before giving up
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
-  # ─── FastAPI Application ───────────────────────────────────────────
+  # ─── Notifications Microservice ────────────────────────────────────
+  notifications:
+    build:
+      context: ./notifications_service   # build from this folder
+      dockerfile: Dockerfile             # using its own Dockerfile
+    restart: always
+    ports:
+      - "8001:8001"                      # runs on port 8001
+    # No database needed — this service is stateless
+
+  # ─── FastAPI Main Application ──────────────────────────────────────
   app:
     build: .
     restart: always
@@ -32,7 +41,9 @@ services:
       ACCESS_TOKEN_EXPIRE_MINUTES: 30
     depends_on:
       db:
-        condition: service_healthy   # wait until DB passes healthcheck
+        condition: service_healthy       # wait for postgres to be ready
+      notifications:
+        condition: service_started       # wait for notifications to start
     volumes:
       - ./uploads:/app/uploads
 
